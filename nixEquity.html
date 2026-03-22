@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIX · Equity Research Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c12;
+    --surface: #0d1420;
+    --surface2: #121c2e;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.15);
+    --text: #e8eaf0;
+    --text-muted: #6b7a94;
+    --text-dim: #3a4558;
+    --accent: #2a6ff0;
+    --accent-glow: rgba(42,111,240,0.25);
+    --accent-pale: rgba(42,111,240,0.08);
+    --gold: #d4a843;
+    --gold-glow: rgba(212,168,67,0.2);
+    --green: #22c55e;
+    --red: #ef4444;
+    --radius: 6px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  html,body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:9999; opacity:0.4;
+  }
+
+  /* ── HERO ── */
+  #section-hero {
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:60px 20px 60px; position:relative;
+  }
+  #section-hero::before {
+    content:''; position:absolute; top:35%; left:50%; transform:translate(-50%,-50%);
+    width:800px; height:600px;
+    background:radial-gradient(ellipse, rgba(42,111,240,0.12) 0%, transparent 65%);
+    pointer-events:none;
+  }
+  #section-hero::after {
+    content:''; position:absolute; inset:0;
+    background-image: linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px);
+    background-size:60px 60px; pointer-events:none;
+    mask-image:radial-gradient(ellipse 80% 80% at 50% 40%, black 20%, transparent 100%);
+  }
+  .hero-inner { position:relative; z-index:1; text-align:center; max-width:680px; width:100%; }
+
+  .brand-badge {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--accent-pale); border:1px solid rgba(42,111,240,0.3);
+    border-radius:100px; padding:5px 16px;
+    font-family:'DM Mono',monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--accent); margin-bottom:28px;
+    animation:fadeUp 0.6s ease both;
+  }
+  .brand-badge::before {
+    content:''; width:6px; height:6px; background:var(--accent); border-radius:50%;
+    box-shadow:0 0 8px var(--accent); animation:pulse 2s ease infinite;
+  }
+
+  .main-logo { font-family:'Playfair Display',serif; font-size:96px; font-weight:900; line-height:0.9; color:white; letter-spacing:-5px; animation:fadeUp 0.6s 0.1s ease both; }
+  .main-logo span { color:var(--accent); text-shadow:0 0 60px var(--accent-glow); }
+
+  .tagline { font-size:13px; color:var(--text-muted); margin-top:18px; letter-spacing:2px; font-weight:300; animation:fadeUp 0.6s 0.2s ease both; }
+  .divider-line { width:48px; height:1px; background:var(--border-bright); margin:36px auto; animation:fadeUp 0.6s 0.3s ease both; }
+
+  /* search card */
+  .search-card {
+    background:var(--surface); border:1px solid var(--border-bright); border-radius:12px;
+    padding:36px 36px 32px; text-align:left;
+    box-shadow:0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    animation:fadeUp 0.6s 0.35s ease both;
+  }
+  .card-label { font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:20px; }
+  .input-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .input-group { display:flex; flex-direction:column; gap:7px; }
+  .input-group label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); }
+  .input-group input {
+    background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px 16px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px;
+    outline:none; transition:border-color 0.2s,box-shadow 0.2s; width:100%;
+  }
+  .input-group input::placeholder { color:var(--text-dim); }
+  .input-group input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
+
+  .generate-btn {
+    width:100%; padding:14px 28px; background:var(--accent); border:none; border-radius:var(--radius);
+    color:white; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer;
+    letter-spacing:0.5px; transition:all 0.2s; display:flex; align-items:center; justify-content:center;
+    gap:10px; box-shadow:0 4px 20px rgba(42,111,240,0.4); margin-top:6px;
+  }
+  .generate-btn:hover { background:#3a7ef5; box-shadow:0 6px 28px rgba(42,111,240,0.55); transform:translateY(-1px); }
+  .generate-btn:active { transform:translateY(0); }
+  .generate-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .info-row { display:flex; gap:20px; margin-top:20px; padding-top:20px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .info-chip { display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-muted); }
+  .info-chip-dot { width:5px; height:5px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .error-box { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius); padding:16px 20px; margin-top:14px; font-size:13px; color:#fca5a5; display:none; }
+
+  .scroll-hint {
+    position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    color:var(--text-dim); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    animation:fadeUp 1s 1s ease both; cursor:pointer; z-index:2;
+  }
+  .scroll-hint-arrow { width:20px; height:20px; border-right:1.5px solid var(--text-dim); border-bottom:1.5px solid var(--text-dim); transform:rotate(45deg); animation:bounce 1.8s ease infinite; }
+
+  /* ── CALLS SECTION ── */
+  #section-calls { padding:120px 48px; position:relative; overflow:hidden; }
+  #section-calls::before {
+    content:''; position:absolute; top:50%; left:20%; transform:translate(-50%,-50%);
+    width:500px; height:400px; background:radial-gradient(ellipse, rgba(212,168,67,0.06) 0%,transparent 70%); pointer-events:none;
+  }
+
+  .section-eyebrow { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:4px; text-transform:uppercase; color:var(--gold); margin-bottom:14px; text-align:center; }
+  .section-heading { font-family:'Playfair Display',serif; font-size:42px; font-weight:900; color:white; text-align:center; line-height:1.1; margin-bottom:14px; letter-spacing:-1px; }
+  .section-sub { font-size:14px; color:var(--text-muted); text-align:center; max-width:480px; margin:0 auto 60px; line-height:1.7; }
+
+  .calls-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:1000px; margin:0 auto; }
+
+  .call-card {
+    background:var(--surface); border:1px solid var(--border-bright); border-radius:10px;
+    padding:28px 24px; position:relative; overflow:hidden;
+    transition:transform 0.3s,box-shadow 0.3s;
+  }
+  .call-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,0,0,0.4); }
+  .call-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--gold)); }
+
+  .premium-badge {
+    position:absolute; top:16px; right:16px;
+    background:rgba(212,168,67,0.12); border:1px solid rgba(212,168,67,0.3);
+    border-radius:100px; padding:3px 10px;
+    font-family:'DM Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--gold);
+  }
+
+  .call-rank { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:14px; }
+
+  .call-stock-name {
+    font-family:'Playfair Display',serif; font-size:28px; font-weight:900; color:white;
+    letter-spacing:-0.5px; margin-bottom:4px;
+    filter:blur(7px); -webkit-filter:blur(7px);
+    user-select:none; -webkit-user-select:none; pointer-events:none;
+  }
+  .call-sector {
+    font-size:11px; color:var(--text-muted); margin-bottom:20px;
+    filter:blur(5px); -webkit-filter:blur(5px);
+    user-select:none; -webkit-user-select:none; pointer-events:none;
+  }
+
+  .call-upside { font-family:'Playfair Display',serif; font-size:40px; font-weight:900; line-height:1; margin-bottom:4px; }
+  .call-upside.high { color:#4ade80; text-shadow:0 0 24px rgba(74,222,128,0.35); }
+  .call-upside.mid  { color:var(--gold); text-shadow:0 0 24px var(--gold-glow); }
+  .call-upside.low  { color:var(--accent); text-shadow:0 0 24px var(--accent-glow); }
+
+  .call-upside-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); margin-bottom:20px; }
+
+  .call-meta { display:flex; flex-direction:column; gap:8px; padding-top:18px; border-top:1px solid var(--border); }
+  .call-meta-row { display:flex; justify-content:space-between; align-items:center; }
+  .call-meta-key { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); }
+  .call-meta-val {
+    color:var(--text-muted); font-size:11px;
+    filter:blur(5px); -webkit-filter:blur(5px);
+    user-select:none; -webkit-user-select:none; pointer-events:none;
+  }
+  .call-rec { display:inline-block; padding:2px 10px; border-radius:2px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; background:rgba(74,222,128,0.12); color:#4ade80; border:1px solid rgba(74,222,128,0.25); }
+
+  .unlock-cta {
+    margin-top:16px; width:100%; padding:10px; background:transparent;
+    border:1px solid var(--border-bright); border-radius:var(--radius);
+    color:var(--text-muted); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    cursor:pointer; transition:all 0.2s; text-align:center; text-decoration:none; display:block;
+  }
+  .unlock-cta:hover { border-color:var(--gold); color:var(--gold); background:rgba(212,168,67,0.06); }
+
+  .calls-disclaimer { text-align:center; margin-top:40px; font-size:11px; color:var(--text-dim); font-family:'DM Mono',monospace; letter-spacing:0.5px; max-width:600px; margin-left:auto; margin-right:auto; line-height:1.7; }
+
+  /* ── ABOUT SECTION ── */
+  #section-about { padding:120px 48px; position:relative; border-top:1px solid var(--border); }
+  #section-about::before {
+    content:''; position:absolute; top:30%; right:0;
+    width:500px; height:500px; background:radial-gradient(ellipse, rgba(42,111,240,0.07) 0%,transparent 70%); pointer-events:none;
+  }
+
+  .about-grid { display:grid; grid-template-columns:1fr 1fr; gap:80px; max-width:1000px; margin:0 auto; align-items:center; }
+
+  .about-logo-text { font-family:'Playfair Display',serif; font-size:72px; font-weight:900; color:white; letter-spacing:-4px; line-height:0.85; }
+  .about-logo-text span { color:var(--accent); text-shadow:0 0 40px var(--accent-glow); }
+  .about-logo-sub { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:4px; text-transform:uppercase; color:var(--text-dim); margin-top:12px; display:block; }
+
+  .about-stat-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:32px; }
+  .about-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden; }
+  .about-stat::after { content:''; position:absolute; bottom:0; left:0; right:0; height:1px; background:linear-gradient(90deg,var(--accent),transparent); }
+  .about-stat-val { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:white; line-height:1; margin-bottom:4px; }
+  .about-stat-val span { color:var(--accent); }
+  .about-stat-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); }
+
+  .about-title { font-family:'Playfair Display',serif; font-size:34px; font-weight:700; color:white; line-height:1.15; margin-bottom:20px; letter-spacing:-0.5px; }
+  .about-body { font-size:14px; color:var(--text-muted); line-height:1.8; margin-bottom:14px; }
+
+  .about-features { list-style:none; display:flex; flex-direction:column; gap:11px; margin-top:24px; margin-bottom:32px; }
+  .about-features li { display:flex; align-items:flex-start; gap:12px; font-size:13px; color:var(--text-muted); }
+  .about-features li::before { content:'▸'; color:var(--accent); flex-shrink:0; margin-top:1px; }
+
+  .social-row { display:flex; gap:12px; flex-wrap:wrap; }
+  .social-btn {
+    display:inline-flex; align-items:center; gap:10px; padding:11px 20px;
+    border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500;
+    text-decoration:none; transition:all 0.2s; border:1px solid var(--border-bright); color:white;
+  }
+  .social-btn-ig { background:linear-gradient(135deg,rgba(193,53,132,0.15),rgba(88,81,219,0.15)); border-color:rgba(193,53,132,0.35); }
+  .social-btn-ig:hover { background:linear-gradient(135deg,rgba(193,53,132,0.28),rgba(88,81,219,0.28)); border-color:rgba(193,53,132,0.6); transform:translateY(-2px); box-shadow:0 8px 24px rgba(193,53,132,0.2); }
+  .social-btn-tg { background:rgba(36,161,222,0.12); border-color:rgba(36,161,222,0.35); }
+  .social-btn-tg:hover { background:rgba(36,161,222,0.22); border-color:rgba(36,161,222,0.6); transform:translateY(-2px); box-shadow:0 8px 24px rgba(36,161,222,0.2); }
+  .social-icon { width:18px; height:18px; flex-shrink:0; }
+
+  /* ── FOOTER ── */
+  .site-footer { border-top:1px solid var(--border); padding:36px 48px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; }
+  .footer-logo { font-family:'Playfair Display',serif; font-size:22px; font-weight:900; color:white; letter-spacing:-1px; }
+  .footer-logo span { color:var(--accent); }
+  .footer-copy { font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--text-dim); text-align:center; line-height:1.8; }
+  .footer-social { display:flex; gap:12px; align-items:center; }
+  .footer-social-link { width:36px; height:36px; border:1px solid var(--border-bright); border-radius:50%; display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text-muted); transition:all 0.2s; }
+  .footer-social-link:hover { border-color:var(--accent); color:white; background:var(--accent-pale); }
+
+  /* ── LOADING OVERLAY ── */
+  #screen-loading {
+    display:none; position:fixed; inset:0; background:var(--bg); z-index:2000;
+    flex-direction:column; align-items:center; justify-content:center; padding:40px 20px;
+  }
+  #screen-loading::before { content:''; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); width:600px; height:400px; background:radial-gradient(ellipse,rgba(212,168,67,0.08) 0%,transparent 70%); pointer-events:none; }
+  .loading-inner { position:relative; z-index:1; text-align:center; max-width:480px; width:100%; }
+  .loader-ring { width:72px; height:72px; margin:0 auto 32px; }
+  .loader-ring svg { animation:spin 1.4s linear infinite; width:72px; height:72px; }
+  .loader-ring-track { fill:none; stroke:var(--border); stroke-width:3; }
+  .loader-ring-fill { fill:none; stroke:var(--accent); stroke-width:3; stroke-linecap:round; stroke-dasharray:160; stroke-dashoffset:40; filter:drop-shadow(0 0 6px var(--accent)); }
+  .loading-stock { font-family:'Playfair Display',serif; font-size:32px; font-weight:700; color:white; margin-bottom:8px; }
+  .loading-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text-muted); margin-bottom:36px; }
+  .progress-track { width:100%; height:2px; background:var(--border); border-radius:2px; overflow:hidden; margin-bottom:20px; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--gold)); border-radius:2px; width:0%; transition:width 0.5s ease; box-shadow:0 0 8px var(--accent); }
+  .loading-steps { display:flex; flex-direction:column; gap:10px; text-align:left; }
+  .loading-step { display:flex; align-items:center; gap:12px; font-size:12.5px; color:var(--text-dim); transition:color 0.3s; }
+  .loading-step.active { color:var(--text); }
+  .loading-step.done { color:var(--green); }
+  .step-icon { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--text-dim); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:9px; transition:all 0.3s; }
+  .loading-step.active .step-icon { border-color:var(--accent); background:var(--accent-pale); color:var(--accent); animation:pulse 1s ease infinite; }
+  .loading-step.done .step-icon { border-color:var(--green); background:rgba(34,197,94,0.12); color:var(--green); }
+
+  /* ── REPORT OVERLAY ── */
+  #screen-report { display:none; position:fixed; inset:0; z-index:2000; background:var(--bg); flex-direction:column; }
+  .report-topbar { position:sticky; top:0; z-index:100; background:rgba(8,12,18,0.95); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:12px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-shrink:0; }
+  .topbar-left { display:flex; align-items:center; gap:14px; }
+  .topbar-logo { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:white; letter-spacing:-1px; }
+  .topbar-logo span { color:var(--accent); }
+  .topbar-stock { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; color:var(--text-muted); padding:4px 12px; background:var(--surface); border:1px solid var(--border); border-radius:100px; }
+  .topbar-actions { display:flex; align-items:center; gap:10px; }
+  .btn-secondary { padding:7px 16px; background:var(--surface); border:1px solid var(--border-bright); border-radius:var(--radius); color:var(--text); font-size:12px; cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:7px; }
+  .btn-secondary:hover { background:var(--surface2); border-color:var(--accent); color:white; }
+  .btn-print { padding:7px 16px; background:var(--accent); border:none; border-radius:var(--radius); color:white; font-size:12px; cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif; font-weight:500; display:flex; align-items:center; gap:7px; box-shadow:0 2px 12px rgba(42,111,240,0.35); }
+  .btn-print:hover { background:#3a7ef5; }
+  .report-content { flex:1; overflow-y:auto; padding:40px 28px; }
+  #report-iframe { width:100%; min-height:90vh; border:1px solid var(--border); border-radius:10px; background:white; box-shadow:0 20px 60px rgba(0,0,0,0.4); max-width:1100px; display:block; margin:0 auto; }
+
+  /* ── SCROLL REVEAL ── */
+  .reveal { opacity:0; transform:translateY(24px); transition:opacity 0.7s ease,transform 0.7s ease; }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+  .reveal-d1 { transition-delay:0.1s; }
+  .reveal-d2 { transition-delay:0.2s; }
+  .reveal-d3 { transition-delay:0.3s; }
+
+  /* ── KEYFRAMES ── */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  @keyframes bounce { 0%,100%{transform:rotate(45deg) translateY(0)} 50%{transform:rotate(45deg) translateY(5px)} }
+
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border-bright); border-radius:3px; }
+
+  @media(max-width:768px) {
+    .main-logo{font-size:64px} .input-row{grid-template-columns:1fr} .search-card{padding:24px 20px}
+    .calls-grid{grid-template-columns:1fr} .about-grid{grid-template-columns:1fr;gap:40px}
+    .site-nav{padding:0 20px} .nav-links{display:none}
+    #section-calls,#section-about{padding:80px 24px}
+    .site-footer{padding:28px 24px;flex-direction:column;text-align:center}
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section id="section-hero">
+  <div class="hero-inner">
+    <div class="brand-badge">AI-Powered Equity Research</div>
+    <div class="main-logo">N<span>I</span>X</div>
+    <div class="tagline">EQUITY RESEARCH ENGINE · INDIAN MARKETS</div>
+    <div class="divider-line"></div>
+    <div class="search-card">
+      <div class="card-label">Generate Full Research Report</div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Stock Name</label>
+          <input type="text" id="stockInput" placeholder="e.g. CDSL, Reliance, Infosys" autocomplete="off"/>
+        </div>
+        <div class="input-group">
+          <label>Author Name</label>
+          <input type="text" id="authorInput" placeholder="e.g. Reyansh Asthana" autocomplete="off"/>
+        </div>
+      </div>
+      <button class="generate-btn" id="generateBtn" onclick="generateReport()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Generate Research Report
+      </button>
+      <div class="error-box" id="errorBox"></div>
+      <div class="info-row">
+        <div class="info-chip"><div class="info-chip-dot"></div>Powered by NIX AI</div>
+        <div class="info-chip"><div class="info-chip-dot" style="background:var(--gold)"></div>7-Section Deep Analysis</div>
+        <div class="info-chip"><div class="info-chip-dot" style="background:var(--accent)"></div>PDF-Ready Output</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint" onclick="document.getElementById('section-calls').scrollIntoView({behavior:'smooth'})">
+    <span>Scroll</span>
+    <div class="scroll-hint-arrow"></div>
+  </div>
+</section>
+
+<!-- RESEARCH CALLS -->
+<section id="section-calls">
+  <div class="section-eyebrow reveal">Latest Research Calls</div>
+  <h2 class="section-heading reveal reveal-d1">Our Top Picks</h2>
+  <p class="section-sub reveal reveal-d2">High-conviction stock calls researched by NIX. Join our community to unlock the full reports, target prices, and entry levels.</p>
+
+  <div class="calls-grid">
+    <div class="call-card reveal reveal-d1">
+      <div class="premium-badge">🔒 Members Only</div>
+      <div class="call-rank">Call #01 · Active</div>
+      <div class="call-stock-name">XXXXXXXXXX</div>
+      <div class="call-sector">Capital Markets · Small Cap</div>
+      <div class="call-upside high">70%</div>
+      <div class="call-upside-label">Upside Target</div>
+      <div class="call-meta">
+        <div class="call-meta-row"><span class="call-meta-key">CMP</span><span class="call-meta-val">₹XXX.XX</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Target</span><span class="call-meta-val">₹X,XXX</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Horizon</span><span class="call-meta-val">12–18 months</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Rating</span><span class="call-rec">STRONG BUY</span></div>
+      </div>
+    </div>
+    <div class="call-card reveal reveal-d2">
+      <div class="premium-badge">🔒 Members Only</div>
+      <div class="call-rank">Call #02 · Active</div>
+      <div class="call-stock-name">XXXXXXXXXX</div>
+      <div class="call-sector">Pharma &amp; Healthcare · Mid Cap</div>
+      <div class="call-upside mid">50%</div>
+      <div class="call-upside-label">Upside Target</div>
+      <div class="call-meta">
+        <div class="call-meta-row"><span class="call-meta-key">CMP</span><span class="call-meta-val">₹X,XXX.XX</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Target</span><span class="call-meta-val">₹X,XXX</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Horizon</span><span class="call-meta-val">18–24 months</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Rating</span><span class="call-rec">BUY</span></div>
+      </div>
+    </div>
+    <div class="call-card reveal reveal-d3">
+      <div class="premium-badge">🔒 Members Only</div>
+      <div class="call-rank">Call #03 · Active</div>
+      <div class="call-stock-name">XXXXXXXXX</div>
+      <div class="call-sector">IT Services · Large Cap</div>
+      <div class="call-upside low">20%</div>
+      <div class="call-upside-label">Upside Target</div>
+      <div class="call-meta">
+        <div class="call-meta-row"><span class="call-meta-key">CMP</span><span class="call-meta-val">₹X,XXX.XX</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Target</span><span class="call-meta-val">₹X,XXX</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Horizon</span><span class="call-meta-val">6–12 months</span></div>
+        <div class="call-meta-row"><span class="call-meta-key">Rating</span><span class="call-rec">BUY</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="calls-disclaimer reveal">
+    Stock names are intentionally hidden to protect our members. Follow <strong style="color:var(--gold)">@tradenix_</strong> on Instagram or join our Telegram channel to access full research reports, entry prices, and stop-losses.<br>
+    Past performance does not guarantee future results. Invest responsibly. Not SEBI-registered investment advice.
+  </p>
+</section>
+
+<!-- DISCLAIMER -->
+<section id="section-disclaimer" style="padding:80px 48px;border-top:1px solid var(--border);position:relative;">
+  <div style="max-width:800px;margin:0 auto;">
+    <div class="section-eyebrow reveal" style="text-align:left;">Legal</div>
+    <h2 class="reveal reveal-d1" style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:white;margin-bottom:28px;letter-spacing:-0.5px;">Disclaimer</h2>
+    <div class="reveal reveal-d2" style="background:var(--surface);border:1px solid var(--border-bright);border-left:3px solid var(--accent);border-radius:var(--radius);padding:32px 36px;">
+      <p style="font-size:13.5px;color:var(--text-muted);line-height:1.9;margin-bottom:16px;">
+        The information, tools, and services provided by <strong style="color:var(--text);">NIX</strong> are intended solely for educational and informational purposes related to stock market activities. Investments in the securities market are subject to market risks. Users are strongly advised to carefully read all relevant documents, disclosures, and risk factors before making any investment decisions.
+      </p>
+      <p style="font-size:13.5px;color:var(--text-muted);line-height:1.9;margin-bottom:16px;">
+        NIX does not guarantee any returns and shall not be held responsible or liable for any financial losses, damages, or errors arising from the use of its platform, tools, or shared information. All investment decisions are taken at the sole discretion and risk of the user.
+      </p>
+      <p style="font-size:13.5px;color:var(--text-muted);line-height:1.9;margin-bottom:16px;">
+        The tools and resources offered by NIX are developed strictly for NIX-related purposes only and are not intended for misuse or application beyond their defined scope.
+      </p>
+      <p style="font-size:13.5px;color:var(--text-muted);line-height:1.9;margin-bottom:0;">
+        By accessing or using NIX services, you acknowledge that you have read, understood, and agreed to this disclaimer.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT NIX -->
+<section id="section-about">
+  <div class="about-grid">
+    <div>
+      <div class="reveal">
+        <div class="about-logo-text">N<span>I</span>X</div>
+        <span class="about-logo-sub">Navigate · Identify · Execute</span>
+      </div>
+      <div class="about-stat-row">
+        <div class="about-stat reveal reveal-d1">
+          <div class="about-stat-val">644<span>+</span></div>
+          <div class="about-stat-label">Instagram Followers</div>
+        </div>
+        <div class="about-stat reveal reveal-d2">
+          <div class="about-stat-val">1<span>M+</span></div>
+          <div class="about-stat-label">Views · Last 30 Days</div>
+        </div>
+        <div class="about-stat reveal reveal-d1">
+          <div class="about-stat-val">7<span>+</span></div>
+          <div class="about-stat-label">Sections Per Report</div>
+        </div>
+        <div class="about-stat reveal reveal-d2">
+          <div class="about-stat-val"><span>₹</span>IN</div>
+          <div class="about-stat-label">Indian Markets Focus</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-eyebrow reveal" style="text-align:left;">Who We Are</div>
+      <h2 class="about-title reveal reveal-d1">Institutional-Grade Research.<br>Built for Every Investor.</h2>
+      <p class="about-body reveal reveal-d2">
+        <strong style="color:white;">NIX</strong> — Navigate, Identify, Execute — is a growing Indian equity research community dedicated to bringing professional-grade stock analysis to retail investors across India.
+      </p>
+      <p class="about-body reveal reveal-d2">
+        We combine deep fundamental analysis, Smart Money Concepts (SMC/ICT), and AI-powered tools to deliver comprehensive research reports on BSE and NSE-listed companies.
+      </p>
+      <ul class="about-features reveal reveal-d3">
+        <li>Deep 7-section equity research reports built on institutional frameworks</li>
+        <li>Coverage across large-cap, mid-cap, and small-cap Indian equities</li>
+        <li>AI-powered research engine for rapid, comprehensive stock analysis</li>
+        <li>Active community of traders and investors on Instagram &amp; Telegram</li>
+        <li>High-conviction stock calls with clear targets and risk management</li>
+        <li>Education-first approach — we explain the <em>why</em> behind every call</li>
+      </ul>
+      <div class="social-row reveal reveal-d3">
+        <a href="https://www.instagram.com/tradenix_/" target="_blank" class="social-btn social-btn-ig">
+          <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          @tradenix_
+        </a>
+        <a href="https://t.me/tradenixx" target="_blank" class="social-btn social-btn-tg">
+          <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          t.me/tradenixx
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">N<span>I</span>X</div>
+  <div class="footer-copy">
+    © 2025 NIX Equity Research · Navigate · Identify · Execute<br>
+    For educational purposes only. Not SEBI-registered investment advice.
+  </div>
+  <div class="footer-social">
+    <a href="https://www.instagram.com/tradenix_/" target="_blank" class="footer-social-link" title="Instagram">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+    </a>
+    <a href="https://t.me/tradenixx" target="_blank" class="footer-social-link" title="Telegram">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </a>
+  </div>
+</footer>
+
+<!-- LOADING OVERLAY -->
+<div id="screen-loading">
+  <div class="loading-inner">
+    <div class="loader-ring">
+      <svg viewBox="0 0 72 72"><circle class="loader-ring-track" cx="36" cy="36" r="30"/><circle class="loader-ring-fill" cx="36" cy="36" r="30"/></svg>
+    </div>
+    <div class="loading-stock" id="loadingStockName">—</div>
+    <div class="loading-label">Generating Equity Research Report</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="loading-steps">
+      <div class="loading-step" id="step1"><div class="step-icon">1</div><span>Analysing company overview &amp; business model</span></div>
+      <div class="loading-step" id="step2"><div class="step-icon">2</div><span>Processing quantitative financial metrics</span></div>
+      <div class="loading-step" id="step3"><div class="step-icon">3</div><span>Evaluating qualitative factors &amp; management</span></div>
+      <div class="loading-step" id="step4"><div class="step-icon">4</div><span>Building investment thesis &amp; valuation model</span></div>
+      <div class="loading-step" id="step5"><div class="step-icon">5</div><span>Rendering professional HTML report</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT OVERLAY -->
+<div id="screen-report">
+  <div class="report-topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">N<span>I</span>X</div>
+      <div class="topbar-stock" id="topbarStockName">—</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-secondary" onclick="closeReport()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <button class="btn-print" onclick="printReport()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print / Save PDF
+      </button>
+    </div>
+  </div>
+  <div class="report-content">
+    <iframe id="report-iframe" frameborder="0"></iframe>
+  </div>
+</div>
+
+<script>
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── KEYBOARD ──
+document.getElementById('stockInput').addEventListener('keydown', e => { if(e.key==='Enter') generateReport(); });
+document.getElementById('authorInput').addEventListener('keydown', e => { if(e.key==='Enter') generateReport(); });
+
+// ── OVERLAYS ──
+function showLoading(v) { document.getElementById('screen-loading').style.display = v ? 'flex' : 'none'; }
+function showReport(v)  { document.getElementById('screen-report').style.display  = v ? 'flex' : 'none'; }
+function closeReport()  { showReport(false); document.getElementById('generateBtn').disabled = false; }
+function printReport() {
+  const iframe = document.getElementById('report-iframe');
+  const content = iframe.srcdoc || '';
+  if (!content) return;
+  const newTab = window.open('', '_blank');
+  newTab.document.open();
+  newTab.document.write(content);
+  newTab.document.close();
+  newTab.onload = function() { setTimeout(() => { newTab.focus(); newTab.print(); }, 300); };
+  setTimeout(() => { try { newTab.focus(); newTab.print(); } catch(e) {} }, 800);
+}
+
+// ── PROGRESS ──
+function setProgress(p) { document.getElementById('progressFill').style.width = p + '%'; }
+function setStep(n) {
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById('step'+i);
+    el.className='loading-step';
+    el.querySelector('.step-icon').textContent=i;
+    if(i<n){el.classList.add('done');el.querySelector('.step-icon').textContent='✓';}
+    else if(i===n){el.classList.add('active');}
+  }
+}
+
+// ── GENERATE ──
+async function generateReport() {
+  const stock  = document.getElementById('stockInput').value.trim();
+  const author = document.getElementById('authorInput').value.trim() || 'Research Analyst';
+  if (!stock) {
+    const b=document.getElementById('errorBox'); b.textContent='Please enter a stock name.'; b.style.display='block';
+    document.getElementById('stockInput').focus(); return;
+  }
+  document.getElementById('errorBox').style.display='none';
+  document.getElementById('generateBtn').disabled=true;
+  document.getElementById('loadingStockName').textContent=stock.toUpperCase();
+  setStep(1); setProgress(8); showLoading(true);
+
+  const timers=[
+    setTimeout(()=>{setStep(2);setProgress(28);},6000),
+    setTimeout(()=>{setStep(3);setProgress(52);},18000),
+    setTimeout(()=>{setStep(4);setProgress(72);},32000),
+    setTimeout(()=>{setStep(5);setProgress(88);},48000),
+  ];
+
+  try {
+    const html = await callClaudeAPI(buildPrompt(stock, author));
+    timers.forEach(clearTimeout);
+    setStep(5); setProgress(100);
+    await new Promise(r=>setTimeout(r,500));
+    showLoading(false);
+    document.getElementById('topbarStockName').textContent=stock.toUpperCase()+' · EQUITY REPORT';
+    showReport(true);
+    const iframe=document.getElementById('report-iframe');
+    iframe.srcdoc=html; iframe.style.height='90vh';
+    iframe.onload=()=>{try{const b=iframe.contentDocument.body;if(b)iframe.style.height=Math.max(b.scrollHeight+40,800)+'px';}catch(e){}};
+  } catch(err) {
+    timers.forEach(clearTimeout);
+    showLoading(false);
+    document.getElementById('generateBtn').disabled=false;
+    const b=document.getElementById('errorBox'); b.textContent='Error: '+(err.message||'Please try again.'); b.style.display='block';
+  }
+}
+
+// ── CLAUDE API ──
+async function callClaudeAPI(prompt) {
+  const messages = [{ role: 'user', content: prompt }];
+  let raw = '';
+
+  while (true) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: messages
+      })
+    });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || 'API error ' + r.status); }
+    const data = await r.json();
+
+    raw += data.content.map(b => b.type === 'text' ? b.text : '').join('');
+
+    if (data.stop_reason === 'end_turn' || data.stop_reason === 'stop_sequence') break;
+
+    if (data.stop_reason === 'tool_use') {
+      messages.push({ role: 'assistant', content: data.content });
+      const toolResults = data.content
+        .filter(b => b.type === 'tool_result')
+        .map(b => ({ type: 'tool_result', tool_use_id: b.tool_use_id || b.id, content: b.content || '' }));
+      if (toolResults.length > 0) {
+        messages.push({ role: 'user', content: toolResults });
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  const m = raw.match(/<!DOCTYPE[\s\S]*$/i) || raw.match(/<html[\s\S]*$/i);
+  if (m) return m[0];
+  const c = raw.match(/```html([\s\S]*?)```/i);
+  if (c) return c[1].trim();
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:40px;max-width:900px;margin:0 auto;}</style></head><body>${raw}</body></html>`;
+}
+
+// ── PROMPT ──
+function buildPrompt(stockName,authorName){
+return `You are an expert equity research analyst specialising in Indian capital markets. Generate a complete, professional equity research report for the stock "${stockName}" authored by "${authorName}".
+
+CRITICAL — LIVE DATA: You have access to the web_search tool. Before writing the report, search for the following to get the most current data:
+1. Search "${stockName} stock price NSE BSE today" — get the latest CMP
+2. Search "${stockName} financials FY24 annual report screener.in" — get revenue, profit, EPS, ROE, ROCE
+3. Search "${stockName} shareholding pattern 2024" — get latest promoter/FII/DII holdings
+Use this live searched data in the report. Do NOT rely only on training data for price and financials.
+
+FY24 = latest annual period. FY20–FY24 = 5-year lookback. Indian FY = April 1 – March 31.
+
+IMPORTANT: Output ONLY the complete HTML document — no preamble, no explanation, no markdown fences. Start directly with <!DOCTYPE html>.
+
+Reproduce this EXACT professional design for ${stockName}:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${stockName} – Equity Analysis Report | ${authorName}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0e1520;--ink-light:#2c3a50;--ink-muted:#5a6b82;--paper:#fafaf8;--paper-warm:#f4f2ed;--rule:#ddd8cf;--accent:#1a4f8a;--accent-light:#2563b0;--accent-pale:#e8f0fa;--gold:#b8922a;--gold-pale:#fdf6e8;--green:#0d6940;--green-pale:#e6f4ec;--red:#b32020;--red-pale:#fceaea;--amber:#b85c00;--amber-pale:#fef3e6;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#e8e4dc;color:var(--ink);font-size:14px;line-height:1.7;}
+.document{max-width:960px;margin:40px auto;background:var(--paper);box-shadow:0 8px 60px rgba(0,0,0,0.18);}
+.doc-header{background:var(--ink);color:white;position:relative;overflow:hidden;}
+.doc-header::before{content:'';position:absolute;top:0;right:0;width:340px;height:100%;background:linear-gradient(135deg,rgba(26,79,138,0.4) 0%,transparent 70%);pointer-events:none;}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;padding:36px 48px 28px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.brand-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.45);display:block;}
+.brand-name{font-family:'Playfair Display',serif;font-size:13px;color:rgba(255,255,255,0.75);}
+.header-meta{text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,0.38);letter-spacing:1.5px;line-height:2;}
+.header-main{padding:32px 48px 40px;}
+.report-tag{display:inline-block;background:var(--accent);color:white;font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:2.5px;text-transform:uppercase;padding:4px 12px;border-radius:2px;margin-bottom:18px;}
+.company-name{font-family:'Playfair Display',serif;font-size:44px;font-weight:900;color:white;line-height:1.05;}
+.company-full{font-size:14px;font-weight:300;color:rgba(255,255,255,0.55);margin-top:6px;letter-spacing:1px;}
+.header-divider{width:48px;height:2px;background:var(--accent-light);margin:18px 0;}
+.header-author{font-size:13px;color:rgba(255,255,255,0.65);}
+.header-author strong{color:white;}
+.rec-banner{background:var(--gold-pale);border-top:3px solid var(--gold);padding:28px 48px;display:flex;align-items:center;gap:48px;flex-wrap:wrap;}
+.rec-pill{display:flex;align-items:center;gap:14px;}
+.rec-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-muted);}
+.rec-value{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);border:2px solid var(--green);padding:3px 16px;border-radius:2px;}
+.rec-stat{display:flex;flex-direction:column;gap:1px;}
+.rec-stat-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-muted);display:block;}
+.rec-stat-value{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--ink);display:block;}
+.rec-stat-sub{font-size:11px;color:var(--green);font-weight:500;}
+.doc-body{padding:56px 48px;}
+.section{margin-bottom:64px;}
+.section-number{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px;}
+.section-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;padding-bottom:14px;border-bottom:2px solid var(--ink);margin-bottom:28px;}
+.subsection{margin-bottom:36px;}
+.subsection-title{font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.subsection-title::after{content:'';flex:1;height:1px;background:var(--rule);}
+p{color:var(--ink-light);margin-bottom:12px;font-size:13.5px;}
+strong{color:var(--ink);font-weight:600;}
+.table-wrap{overflow-x:auto;margin:18px 0 24px;border:1px solid var(--rule);border-radius:3px;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead tr{background:var(--ink);color:white;}
+thead th{padding:10px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;}
+tbody tr:nth-child(even){background:var(--paper-warm);}
+tbody td{padding:9px 16px;border-bottom:1px solid var(--rule);color:var(--ink-light);font-size:13px;}
+tbody td:first-child{font-weight:500;color:var(--ink);}
+.badge{display:inline-block;padding:2px 10px;border-radius:2px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;}
+.badge-green{background:var(--green-pale);color:var(--green);}
+.badge-red{background:var(--red-pale);color:var(--red);}
+.badge-amber{background:var(--amber-pale);color:var(--amber);}
+.badge-blue{background:var(--accent-pale);color:var(--accent);}
+.up{color:var(--green);font-weight:600;}.down{color:var(--red);font-weight:600;}.neutral{color:var(--amber);font-weight:600;}
+.callout{padding:18px 22px;border-radius:3px;margin:18px 0;border-left:4px solid;font-size:13px;}
+.callout-green{background:var(--green-pale);border-color:var(--green);color:var(--green);}
+.callout-blue{background:var(--accent-pale);border-color:var(--accent);color:var(--accent-light);}
+.callout-amber{background:var(--amber-pale);border-color:var(--amber);color:var(--amber);}
+.callout-red{background:var(--red-pale);border-color:var(--red);color:var(--red);}
+.callout strong{color:inherit;}
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0;}
+.metric-card{background:var(--paper-warm);border:1px solid var(--rule);border-radius:3px;padding:18px 20px;position:relative;overflow:hidden;}
+.metric-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent);}
+.metric-card.green::before{background:var(--green);}.metric-card.red::before{background:var(--red);}.metric-card.gold::before{background:var(--gold);}
+.metric-card-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-muted);margin-bottom:6px;}
+.metric-card-value{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--ink);}
+.metric-card-trend{font-size:11px;margin-top:4px;font-weight:500;}
+.sh-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.sh-label{font-size:12px;font-weight:500;color:var(--ink);width:160px;flex-shrink:0;}
+.sh-bar-bg{flex:1;height:8px;background:var(--paper-warm);border:1px solid var(--rule);border-radius:4px;overflow:hidden;}
+.sh-bar-fill{height:100%;border-radius:4px;}
+.sh-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink-light);width:48px;text-align:right;}
+.thesis-list{list-style:none;display:flex;flex-direction:column;gap:12px;}
+.thesis-list li{display:flex;gap:14px;align-items:flex-start;padding:14px 18px;background:var(--paper-warm);border:1px solid var(--rule);border-radius:3px;font-size:13px;color:var(--ink-light);}
+.thesis-list li::before{content:'→';color:var(--accent);font-weight:700;flex-shrink:0;}
+.val-box{background:var(--ink);color:white;border-radius:3px;padding:28px 32px;margin:24px 0;}
+.val-box-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:20px;color:rgba(255,255,255,0.9);border-bottom:1px solid rgba(255,255,255,0.12);padding-bottom:12px;}
+.val-row{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.7);}
+.val-row strong{color:white;}
+.val-total{display:flex;justify-content:space-between;background:var(--accent);border-radius:2px;padding:12px 16px;font-weight:600;font-size:15px;color:white;margin-top:8px;}
+.final-rec{background:linear-gradient(135deg,#0d2a4a 0%,#1a4f8a 100%);border-radius:3px;padding:32px 36px;margin:24px 0;position:relative;overflow:hidden;}
+.final-rec-grid{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:32px;align-items:center;}
+.final-rec-tag{font-family:'Playfair Display',serif;font-size:40px;font-weight:900;color:#4ade80;border:3px solid #4ade80;padding:8px 20px;border-radius:3px;letter-spacing:2px;}
+.final-rec-stat{display:flex;flex-direction:column;gap:4px;}
+.final-rec-stat-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,0.4);}
+.final-rec-stat-value{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:white;}
+.final-rec-stat-sub{font-size:11px;color:#4ade80;font-weight:500;}
+.section-break{border-top:1px solid var(--rule);margin-top:64px;padding-top:64px;}
+.doc-footer{background:var(--ink);color:rgba(255,255,255,0.35);padding:20px 48px;font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:0.5px;line-height:1.8;display:flex;justify-content:space-between;gap:32px;}
+@media print{body{background:white;}.document{box-shadow:none;margin:0;}}
+</style>
+</head>
+<body>
+<div class="document">
+  <header class="doc-header">
+    <div class="header-top">
+      <div><span class="brand-label">Equity Research</span><span class="brand-name">${authorName} · NIX Capital Markets</span></div>
+      <div class="header-meta"><div>SECTOR · [SECTOR]</div><div>EXCHANGE · BSE / NSE</div><div>CURRENCY · INR</div><div>FISCAL YEAR END · MARCH 31</div></div>
+    </div>
+    <div class="header-main">
+      <div class="report-tag">Initiating Coverage</div>
+      <div class="company-name">${stockName.toUpperCase()}</div>
+      <div class="company-full">[FULL COMPANY NAME]</div>
+      <div class="header-divider"></div>
+      <div class="header-author">Prepared by <strong>${authorName}</strong></div>
+    </div>
+  </header>
+  <div class="rec-banner">
+    <div class="rec-pill"><span class="rec-label">Rating</span><span class="rec-value">[BUY/SELL/HOLD]</span></div>
+    <div class="rec-stat"><span class="rec-stat-label">Target Price</span><span class="rec-stat-value">₹[X]</span><span class="rec-stat-sub">[Y]% upside</span></div>
+    <div class="rec-stat"><span class="rec-stat-label">Current Price</span><span class="rec-stat-value">₹[X]</span></div>
+    <div class="rec-stat"><span class="rec-stat-label">Horizon</span><span class="rec-stat-value">[X–Y] months</span></div>
+    <div class="rec-stat"><span class="rec-stat-label">Market Cap</span><span class="rec-stat-value">₹[X] Cr</span></div>
+  </div>
+  <div class="doc-body">
+    [ALL 7 SECTIONS — FULLY POPULATED WITH REAL DATA]
+  </div>
+  <footer class="doc-footer">
+    <div>DISCLAIMER: For informational and educational purposes only. Not SEBI-registered investment advice. Consult a registered financial advisor before investing. Past performance does not guarantee future returns.</div>
+    <div style="text-align:right">${authorName} · NIX Equity Research<br>${stockName.toUpperCase()} · BSE/NSE</div>
+  </footer>
+</div>
+</body></html>
+
+Now generate the COMPLETE, FULLY POPULATED version for ${stockName} with ALL 7 sections filled in with real financial data. Output ONLY the HTML starting with <!DOCTYPE html>.
+
+MANDATORY RULES:
+- Indian FY: April 1–March 31. FY24=latest annual. Lookback FY20–FY24.
+- Keep ALL CSS classes and visual design from template above exactly
+- BUY/SELL/HOLD with specific target price and investment horizon
+- Real researched financial figures for ${stockName} (not placeholders)
+- Color-code tables: up=green, down=red, neutral=amber
+- Every table must have actual numbers
+- All 7 sections complete and detailed`;
+}
+</script>
+</body>
+</html>
